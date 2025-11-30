@@ -1,0 +1,7 @@
+{
+  "name": "Baguncinha Salarial",
+  "description": "Smart financial tracking assistant powered by Gemini. Organize expenses automatically via text or voice.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
