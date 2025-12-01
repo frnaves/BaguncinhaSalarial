@@ -7,6 +7,7 @@ import ConfirmationModal from './components/ConfirmationModal';
 import IncomeSettings from './components/IncomeSettings';
 import PercentageSettings from './components/PercentageSettings';
 import HistoryModal from './components/HistoryModal';
+import LoginScreen from './components/LoginScreen';
 import { parseTransactionInput } from './services/geminiService';
 import { 
   subscribeToTransactions, 
@@ -15,19 +16,27 @@ import {
   subscribeToIncomes,
   saveIncomeToDb,
   subscribeToSettings,
-  saveSettingsToDb
+  saveSettingsToDb,
+  initializeUserData
 } from './services/dbService';
-import { List, CloudOff, Cloud, AlertTriangle, ExternalLink, RefreshCw } from 'lucide-react';
+import { auth } from './firebaseConfig';
+import { signOut } from './services/authService';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { List, CloudOff, AlertTriangle, ExternalLink, RefreshCw, LogOut } from 'lucide-react';
 
 const App: React.FC = () => {
-  // State
+  // Auth State
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+  // App State
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [monthlyIncomes, setMonthlyIncomes] = useState<Record<string, Income>>({});
   const [settings, setSettings] = useState<CategorySettings>(DEFAULT_SETTINGS);
   
   // Database connection state
   const [dbError, setDbError] = useState<string | null>(null);
-  const [retryKey, setRetryKey] = useState(0); // Used to force re-subscription
+  const [retryKey, setRetryKey] = useState(0); 
 
   const [currentDashboardDate, setCurrentDashboardDate] = useState(new Date());
   const [isLoading, setIsLoading] = useState(false);
@@ -39,18 +48,45 @@ const App: React.FC = () => {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
+  // --- Auth Listener ---
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      setIsAuthLoading(false);
+      
+      if (currentUser) {
+        // Initialize default data for new users
+        try {
+            await initializeUserData(currentUser.uid);
+        } catch (e) {
+            console.error("Initialization error", e);
+        }
+      } else {
+        // Reset state on logout
+        setTransactions([]);
+        setMonthlyIncomes({});
+        setSettings(DEFAULT_SETTINGS);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   // --- Database Subscriptions ---
   
   useEffect(() => {
+    if (!user) return; // Don't subscribe if no user
+
+    const userId = user.uid;
+
     // 1. Transactions Listener
     const unsubscribeTransactions = subscribeToTransactions(
+      userId,
       (data) => {
         setTransactions(data);
         setDbError(null);
       },
       (error) => {
         console.error("Erro de permissão ou conexão:", error);
-        // Handle specific "API not used" error which is common for new projects
         if (error?.message?.includes('Cloud Firestore API has not been used')) {
             setDbError('api_not_ready');
         } else {
@@ -60,12 +96,12 @@ const App: React.FC = () => {
     );
 
     // 2. Incomes Listener
-    const unsubscribeIncomes = subscribeToIncomes((data) => {
+    const unsubscribeIncomes = subscribeToIncomes(userId, (data) => {
       setMonthlyIncomes(data);
     });
 
     // 3. Settings Listener
-    const unsubscribeSettings = subscribeToSettings((data) => {
+    const unsubscribeSettings = subscribeToSettings(userId, (data) => {
       if (data) {
         setSettings(data);
       }
@@ -76,9 +112,9 @@ const App: React.FC = () => {
       unsubscribeIncomes();
       unsubscribeSettings();
     };
-  }, [retryKey]); // Re-run when user clicks "Try Again"
+  }, [user, retryKey]); // Re-run when user changes or retry
 
-  // Derived State for Current Month
+  // Derived State
   const getMonthKey = (date: Date) => {
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
@@ -90,18 +126,18 @@ const App: React.FC = () => {
 
   // Handlers
   const handleUpdateIncome = async (newIncome: Income) => {
-    // Optimistic update
+    if (!user) return;
     setMonthlyIncomes(prev => ({
         ...prev,
         [currentMonthKey]: newIncome
     }));
-    await saveIncomeToDb(currentMonthKey, newIncome);
+    await saveIncomeToDb(user.uid, currentMonthKey, newIncome);
   };
 
   const handleUpdateSettings = async (newSettings: CategorySettings) => {
-      // Optimistic update
+      if (!user) return;
       setSettings(newSettings);
-      await saveSettingsToDb(newSettings);
+      await saveSettingsToDb(user.uid, newSettings);
   };
 
   const handleGeminiInput = async (text?: string, audioBlob?: Blob) => {
@@ -136,7 +172,8 @@ const App: React.FC = () => {
   };
 
   const confirmTransaction = async (data: GeminiParsedResponse) => {
-    
+    if (!user) return;
+
     // Handle Income type
     if (data.type === 'INCOME') {
         const dateObj = new Date(data.date || new Date());
@@ -148,14 +185,13 @@ const App: React.FC = () => {
             extras: existing.extras + data.amount
         };
 
-        await saveIncomeToDb(targetMonthKey, updatedIncome);
+        await saveIncomeToDb(user.uid, targetMonthKey, updatedIncome);
         setPendingTransaction(null);
         return;
     }
 
     // Handle Expense type
     if (editingId) {
-      // Find original to preserve some fields if needed, but mostly overwrite
       const original = transactions.find(t => t.id === editingId);
       if (original) {
           const updatedTransaction: Transaction = {
@@ -165,11 +201,10 @@ const App: React.FC = () => {
               category: data.category as CategoryType,
               date: data.date || original.date
           };
-          await saveTransactionToDb(updatedTransaction);
+          await saveTransactionToDb(user.uid, updatedTransaction);
       }
       setEditingId(null);
     } else {
-      // Create new transaction
       const newTransaction: Transaction = {
         id: crypto.randomUUID(),
         description: data.description,
@@ -178,14 +213,15 @@ const App: React.FC = () => {
         date: data.date || new Date().toISOString().split('T')[0],
         createdAt: Date.now()
       };
-      await saveTransactionToDb(newTransaction);
+      await saveTransactionToDb(user.uid, newTransaction);
     }
     setPendingTransaction(null);
   };
 
   const deleteTransaction = async (id: string) => {
+    if (!user) return;
     if (confirm('Tem certeza que deseja excluir este lançamento?')) {
-        await deleteTransactionFromDb(id);
+        await deleteTransactionFromDb(user.uid, id);
     }
   };
 
@@ -206,6 +242,23 @@ const App: React.FC = () => {
     setRetryKey(prev => prev + 1);
   };
 
+  // --- Render ---
+
+  if (isAuthLoading) {
+    return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+            <div className="animate-pulse flex flex-col items-center">
+                <span className="text-4xl mb-4">💸</span>
+                <p className="text-slate-400">Carregando...</p>
+            </div>
+        </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginScreen />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
         {/* Navigation Bar */}
@@ -218,11 +271,10 @@ const App: React.FC = () => {
                 </div>
                 
                 <div className="flex items-center gap-2">
-                    {/* Connection Status Indicator */}
+                    {/* Connection Status */}
                     {dbError ? (
-                       <div className="flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-red-50 text-red-600 animate-pulse cursor-help" title="Erro de conexão com o banco de dados.">
+                       <div className="flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-red-50 text-red-600 animate-pulse cursor-help" title="Erro de conexão.">
                           <CloudOff className="w-3 h-3" />
-                          <span>Erro Conexão</span>
                        </div>
                     ) : (
                        <div className="hidden md:flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-emerald-50 text-emerald-600">
@@ -230,16 +282,26 @@ const App: React.FC = () => {
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                           </span>
-                          <span>Online</span>
+                          <span className="font-medium">Online</span>
                        </div>
                     )}
 
+                    <div className="h-6 w-px bg-slate-200 mx-1"></div>
+
                     <button 
                         onClick={() => setShowHistoryModal(true)}
-                        className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-2"
+                        className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors"
+                        title="Histórico"
                     >
                         <List className="w-5 h-5" />
-                        <span className="hidden sm:inline text-sm font-medium">Histórico</span>
+                    </button>
+                    
+                    <button 
+                        onClick={() => signOut()}
+                        className="p-2 text-slate-500 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors"
+                        title="Sair"
+                    >
+                        <LogOut className="w-5 h-5" />
                     </button>
                 </div>
             </div>
@@ -286,6 +348,14 @@ const App: React.FC = () => {
 
         {/* Main Content */}
         <main className="max-w-4xl mx-auto px-4 py-8">
+            <div className="flex items-center gap-2 mb-4">
+                <img src={user.photoURL || `https://ui-avatars.com/api/?name=${user.email}`} alt="Avatar" className="w-8 h-8 rounded-full border border-slate-200" />
+                <div>
+                    <p className="text-xs text-slate-500">Olá,</p>
+                    <p className="text-sm font-bold text-slate-800 leading-none">{user.displayName || user.email}</p>
+                </div>
+            </div>
+
             <Dashboard 
                 transactions={transactions}
                 income={currentIncome}

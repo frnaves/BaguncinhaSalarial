@@ -1,14 +1,12 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 
 // --- INSTRUÇÕES ---
 // 1. Vá no console do Firebase (Configurações do Projeto > Geral > Role até o fim).
 // 2. Selecione a opção "Config" (bolinha redonda).
 // 3. Copie os valores e substitua abaixo (mantenha as aspas).
 
-
-
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyADA8PoFdQHt69qyxFxeydHL0MERZRcMdU",
   authDomain: "baguncinhasalarial.firebaseapp.com",
@@ -22,5 +20,6 @@ const firebaseConfig = {
 // Inicializa o Firebase
 const app = initializeApp(firebaseConfig);
 
-// Exporta o banco de dados para ser usado no app
+// Exporta serviços
 export const db = getFirestore(app);
+export const auth = getAuth(app);
