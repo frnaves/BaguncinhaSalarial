@@ -1,6 +1,6 @@
 import React from 'react';
 import { Income } from '../types';
-import { DollarSign } from 'lucide-react';
+import { DollarSign, X } from 'lucide-react';
 
 interface IncomeSettingsProps {
   income: Income;
@@ -26,8 +26,15 @@ const IncomeSettings: React.FC<IncomeSettingsProps> = ({ income, setIncome, isOp
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
-        <div className="flex justify-between items-center mb-6">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 relative">
+        <button 
+          onClick={onClose} 
+          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        <div className="flex justify-between items-center mb-6 pr-8">
           <div>
             <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                 <DollarSign className="w-6 h-6 text-emerald-600" />
@@ -37,9 +44,6 @@ const IncomeSettings: React.FC<IncomeSettingsProps> = ({ income, setIncome, isOp
                 Ref. {capitalizedMonth}
             </p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
-            ✕
-          </button>
         </div>
 
         <div className="space-y-4">

@@ -27,9 +27,17 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ data, isEditing =
 
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 p-4 animate-in fade-in duration-200 backdrop-blur-sm">
-      <div className="bg-white rounded-t-2xl md:rounded-2xl shadow-2xl w-full max-w-lg p-6 animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-5 duration-300">
+      <div className="bg-white rounded-t-2xl md:rounded-2xl shadow-2xl w-full max-w-lg p-6 animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-5 duration-300 relative">
         
-        <div className="flex justify-between items-start mb-4">
+        {/* Close Button */}
+        <button 
+          onClick={onCancel} 
+          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors z-10"
+        >
+            <X className="w-5 h-5" />
+        </button>
+
+        <div className="flex justify-between items-start mb-4 pr-10">
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-lg ${isIncome ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
                 {isIncome ? <TrendingUp className="w-6 h-6" /> : <TrendingDown className="w-6 h-6" />}
@@ -43,9 +51,6 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ data, isEditing =
                 </p>
             </div>
           </div>
-          <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 p-1">
-            <X className="w-6 h-6" />
-          </button>
         </div>
 
         <div className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-100">

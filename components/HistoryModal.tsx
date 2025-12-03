@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Transaction, CategoryType } from '../types';
 import { CATEGORY_LABELS, CATEGORY_COLORS, getCategoryIcon } from '../constants';
-import { Trash2, Calendar, Pencil, Download, Filter } from 'lucide-react';
+import { Trash2, Calendar, Pencil, Download, Filter, X } from 'lucide-react';
 
 interface HistoryModalProps {
   transactions: Transaction[];
@@ -69,10 +69,19 @@ const HistoryModal: React.FC<HistoryModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] relative">
         
+        {/* Close Button */}
+        <button 
+          onClick={onClose} 
+          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors z-10"
+          title="Fechar"
+        >
+          <X className="w-6 h-6" />
+        </button>
+
         {/* Header */}
-        <div className="flex-shrink-0 p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex-shrink-0 p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pr-14">
           <div>
             <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
               <Calendar className="w-6 h-6 text-slate-600" />
@@ -82,9 +91,6 @@ const HistoryModal: React.FC<HistoryModalProps> = ({
                 {filteredTransactions.length} lançamentos encontrados
             </p>
           </div>
-          <button onClick={onClose} className="md:hidden absolute top-4 right-4 text-slate-400 hover:text-slate-600">
-            ✕
-          </button>
         </div>
 
         {/* Filters & Actions */}
