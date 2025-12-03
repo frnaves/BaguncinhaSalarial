@@ -2,7 +2,7 @@ import React from 'react';
 import { Transaction, Income, CategorySettings, CategoryType } from '../types';
 import { CATEGORY_COLORS, CATEGORY_LABELS, getCategoryIcon, CATEGORY_DESCRIPTIONS } from '../constants';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
-import { Edit3, Calendar, BarChart3, ArrowRight } from 'lucide-react';
+import { Edit3, Calendar, BarChart3 } from 'lucide-react';
 
 interface DashboardProps {
   transactions: Transaction[];
@@ -12,6 +12,7 @@ interface DashboardProps {
   onDateChange: (date: Date) => void;
   onOpenIncomeSettings: () => void;
   onOpenPercentageSettings: () => void;
+  onCategoryClick: (category: CategoryType) => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ 
@@ -21,7 +22,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   currentDate,
   onDateChange,
   onOpenIncomeSettings,
-  onOpenPercentageSettings
+  onOpenPercentageSettings,
+  onCategoryClick
 }) => {
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
@@ -171,10 +173,15 @@ const Dashboard: React.FC<DashboardProps> = ({
       {/* Categories Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {stats.map((stat) => (
-            <div key={stat.category} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div 
+                key={stat.category} 
+                onClick={() => onCategoryClick(stat.category)}
+                className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between hover:shadow-lg transition-all cursor-pointer group active:scale-[0.98] relative overflow-hidden"
+                title="Clique para ver histórico"
+            >
                 <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-3">
-                        <div className="p-2.5 rounded-lg bg-slate-50 text-slate-600">
+                        <div className="p-2.5 rounded-lg bg-slate-50 text-slate-600 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
                              {getCategoryIcon(stat.category)}
                         </div>
                         <div>

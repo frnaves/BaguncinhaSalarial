@@ -22,7 +22,7 @@ import {
 import { auth } from './firebaseConfig';
 import { signOut } from './services/authService';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { List, CloudOff, AlertTriangle, ExternalLink, RefreshCw, LogOut } from 'lucide-react';
+import { CloudOff, RefreshCw, LogOut } from 'lucide-react';
 
 const App: React.FC = () => {
   // Auth State
@@ -47,6 +47,9 @@ const App: React.FC = () => {
   const [showIncomeModal, setShowIncomeModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  
+  // Filter for history modal
+  const [historyFilterCategory, setHistoryFilterCategory] = useState<CategoryType | undefined>(undefined);
 
   // --- Auth Listener ---
   useEffect(() => {
@@ -242,6 +245,16 @@ const App: React.FC = () => {
     setRetryKey(prev => prev + 1);
   };
 
+  const handleOpenHistory = (category?: CategoryType) => {
+      setHistoryFilterCategory(category);
+      setShowHistoryModal(true);
+  };
+
+  const handleCloseHistory = () => {
+      setShowHistoryModal(false);
+      setHistoryFilterCategory(undefined); // Reset filter when closing
+  };
+
   // --- Render ---
 
   if (isAuthLoading) {
@@ -277,7 +290,7 @@ const App: React.FC = () => {
                           <CloudOff className="w-3 h-3" />
                        </div>
                     ) : (
-                       <div className="hidden md:flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-emerald-50 text-emerald-600">
+                       <div className="hidden md:flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
                           <span className="relative flex h-2 w-2">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -286,76 +299,51 @@ const App: React.FC = () => {
                        </div>
                     )}
 
-                    <div className="h-6 w-px bg-slate-200 mx-1"></div>
+                    <div className="h-4 w-px bg-slate-200 mx-1"></div>
 
-                    <button 
-                        onClick={() => setShowHistoryModal(true)}
-                        className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors"
-                        title="Histórico"
-                    >
-                        <List className="w-5 h-5" />
-                    </button>
-                    
-                    <button 
-                        onClick={() => signOut()}
-                        className="p-2 text-slate-500 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors"
-                        title="Sair"
-                    >
-                        <LogOut className="w-5 h-5" />
-                    </button>
+                    {/* User Info / Logout */}
+                    <div className="flex items-center gap-2">
+                        {user.photoURL && (
+                            <img src={user.photoURL} alt="User" className="w-8 h-8 rounded-full border border-slate-200" />
+                        )}
+                        <button 
+                            onClick={signOut}
+                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Sair"
+                        >
+                            <LogOut className="w-5 h-5" />
+                        </button>
+                    </div>
                 </div>
             </div>
         </nav>
-        
-        {/* Error Banner */}
-        {dbError && (
-          <div className="bg-amber-600 text-white p-4 text-sm font-medium shadow-lg animate-in slide-in-from-top-2">
-             <div className="max-w-4xl mx-auto">
-                <div className="flex items-center gap-2 mb-3 text-amber-100 uppercase tracking-wider text-xs font-bold">
-                    <AlertTriangle className="w-4 h-4" />
-                    {dbError === 'api_not_ready' ? 'Aguardando Ativação do Google' : 'Conexão com Banco de Dados'}
-                </div>
-                
-                <div className="bg-white/10 p-4 rounded-lg backdrop-blur-sm">
-                    {dbError === 'api_not_ready' ? (
-                        <>
-                            <p className="mb-2 font-semibold text-lg">Seu banco de dados foi criado, mas o Google ainda está liberando o acesso.</p>
-                            <p className="text-amber-50 mb-4">Isso é normal e pode levar até 5 minutos. Aguarde um pouco e clique em tentar novamente.</p>
-                        </>
-                    ) : (
-                        <>
-                            <p className="mb-2 font-semibold text-lg">Não foi possível conectar ao banco de dados.</p>
-                            <p className="text-amber-50 mb-4">Verifique se você criou o "Firestore Database" no modo de teste no console do Firebase.</p>
-                            <div className="mb-4">
-                                <a href="https://console.firebase.google.com/project/baguncinhasalarial/firestore" target="_blank" rel="noopener noreferrer" className="underline hover:text-white font-bold inline-flex items-center gap-1">
-                                    Abrir Console do Firebase <ExternalLink className="w-3 h-3"/>
-                                </a>
-                            </div>
-                        </>
-                    )}
-                    
+
+        {/* Database Error Banner */}
+        {dbError === 'api_not_ready' && (
+            <div className="bg-red-50 border-b border-red-100 p-4">
+                <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-red-800">
+                    <div className="flex items-center gap-2">
+                        <CloudOff className="w-5 h-5 flex-shrink-0" />
+                        <p>
+                            <strong>Banco de dados ainda não está pronto.</strong>
+                            <span className="block md:inline md:ml-1 text-red-600">
+                                Se você acabou de criar, aguarde uns minutos.
+                            </span>
+                        </p>
+                    </div>
                     <button 
                         onClick={handleRetryConnection}
-                        className="bg-white text-amber-700 py-2 px-4 rounded-lg font-bold hover:bg-amber-50 transition-colors shadow-sm inline-flex items-center gap-2"
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-red-200 rounded-lg hover:bg-red-50 font-medium transition-colors shadow-sm"
                     >
                         <RefreshCw className="w-4 h-4" />
                         Tentar Conectar Novamente
                     </button>
                 </div>
-             </div>
-          </div>
+            </div>
         )}
 
         {/* Main Content */}
-        <main className="max-w-4xl mx-auto px-4 py-8">
-            <div className="flex items-center gap-2 mb-4">
-                <img src={user.photoURL || `https://ui-avatars.com/api/?name=${user.email}`} alt="Avatar" className="w-8 h-8 rounded-full border border-slate-200" />
-                <div>
-                    <p className="text-xs text-slate-500">Olá,</p>
-                    <p className="text-sm font-bold text-slate-800 leading-none">{user.displayName || user.email}</p>
-                </div>
-            </div>
-
+        <main className="max-w-4xl mx-auto p-4 md:p-6 pb-32">
             <Dashboard 
                 transactions={transactions}
                 income={currentIncome}
@@ -364,44 +352,46 @@ const App: React.FC = () => {
                 onDateChange={setCurrentDashboardDate}
                 onOpenIncomeSettings={() => setShowIncomeModal(true)}
                 onOpenPercentageSettings={() => setShowSettingsModal(true)}
+                onCategoryClick={handleOpenHistory}
             />
         </main>
 
-        {/* Input Area */}
+        {/* Floating Action / Input */}
         <InputArea onSend={handleGeminiInput} isLoading={isLoading} />
 
         {/* Modals */}
         <ConfirmationModal 
-            data={pendingTransaction} 
+            data={pendingTransaction}
             isEditing={!!editingId}
-            onConfirm={confirmTransaction} 
+            onConfirm={confirmTransaction}
             onCancel={() => {
-              setPendingTransaction(null);
-              setEditingId(null);
-            }} 
+                setPendingTransaction(null);
+                setEditingId(null);
+            }}
         />
 
         <IncomeSettings 
-            income={currentIncome} 
-            setIncome={handleUpdateIncome} 
-            isOpen={showIncomeModal} 
+            isOpen={showIncomeModal}
             onClose={() => setShowIncomeModal(false)}
+            income={currentIncome}
+            setIncome={handleUpdateIncome}
             currentDate={currentDashboardDate}
         />
 
         <PercentageSettings 
-            settings={settings} 
-            onSave={handleUpdateSettings} 
-            isOpen={showSettingsModal} 
-            onClose={() => setShowSettingsModal(false)} 
+            isOpen={showSettingsModal}
+            onClose={() => setShowSettingsModal(false)}
+            settings={settings}
+            onSave={handleUpdateSettings}
         />
 
         <HistoryModal 
             transactions={transactions}
+            initialCategory={historyFilterCategory}
             onDelete={deleteTransaction}
             onEdit={startEditingTransaction}
             isOpen={showHistoryModal}
-            onClose={() => setShowHistoryModal(false)}
+            onClose={handleCloseHistory}
         />
     </div>
   );
