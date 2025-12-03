@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Transaction, Income, CategorySettings, GeminiParsedResponse, CategoryType } from './types';
 import { DEFAULT_SETTINGS } from './constants';
@@ -353,6 +354,7 @@ const App: React.FC = () => {
                 onOpenIncomeSettings={() => setShowIncomeModal(true)}
                 onOpenPercentageSettings={() => setShowSettingsModal(true)}
                 onCategoryClick={handleOpenHistory}
+                onViewHistory={() => handleOpenHistory()}
             />
         </main>
 

@@ -1,8 +1,9 @@
+
 import React from 'react';
 import { Transaction, Income, CategorySettings, CategoryType } from '../types';
 import { CATEGORY_COLORS, CATEGORY_LABELS, getCategoryIcon, CATEGORY_DESCRIPTIONS } from '../constants';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
-import { Edit3, Calendar, BarChart3 } from 'lucide-react';
+import { Edit3, Calendar, BarChart3, History } from 'lucide-react';
 
 interface DashboardProps {
   transactions: Transaction[];
@@ -13,6 +14,7 @@ interface DashboardProps {
   onOpenIncomeSettings: () => void;
   onOpenPercentageSettings: () => void;
   onCategoryClick: (category: CategoryType) => void;
+  onViewHistory: () => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ 
@@ -23,7 +25,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   onDateChange,
   onOpenIncomeSettings,
   onOpenPercentageSettings,
-  onCategoryClick
+  onCategoryClick,
+  onViewHistory
 }) => {
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
@@ -168,6 +171,18 @@ const Dashboard: React.FC<DashboardProps> = ({
                 </div>
             </div>
         </div>
+      </div>
+
+      {/* Categories Header & Action */}
+      <div className="flex items-center justify-between px-1">
+        <h3 className="text-lg font-bold text-slate-800">Meus Potes</h3>
+        <button 
+          onClick={onViewHistory}
+          className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-medium hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-100 transition-all shadow-sm active:scale-95"
+        >
+          <History className="w-4 h-4" />
+          Ver Histórico Completo
+        </button>
       </div>
 
       {/* Categories Grid */}
